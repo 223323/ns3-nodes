@@ -1,0 +1,8 @@
+#!/bin/bash
+cmd="${1:+$@}"
+cwd_dir=work/$1
+mkdir -p work
+rm -rf $cwd_dir/*
+mkdir -p $cwd_dir
+echo ./waf --cwd $cwd_dir --run $1
+./waf --cwd $cwd_dir --run $1
