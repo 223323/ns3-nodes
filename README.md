@@ -1,8 +1,10 @@
 
 ## prepare environment
+```
 cd ns-3.29
 touch run
 chmod +x run
+```
 
 copy content to run file
 ```
@@ -18,16 +20,17 @@ echo ./waf --cwd $cwd_dir --run $1
 
 
 ## running
+```
 cd ns-3.29
 ./run rtrk-nodes
-
+```
 
 ## results
 cd ns-3.29/work/rtrk-nodes/
 
-- channel_stats.csv
+- channel_stats.csv:
 Each row represents channels current usage in Bytes per second.
 Each row is for each second passed.
-- ips.txt
+- ips.txt:
 Shows reaper ip addresses and their channel index.
 Same index means they are directly connected.
