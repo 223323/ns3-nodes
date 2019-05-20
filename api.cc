@@ -1,10 +1,11 @@
 #include "api.h"
 #include "app.h"
-
+#include "modified-default-simulator-impl.h"
 namespace Sim {
 
 Api::Api() : m_idle(0) {
 	m_max_idle = 10;
+	m_port = 2000;
 }
 
 void
@@ -31,7 +32,8 @@ Api::SendPacket(const SimPacket& pkt) {
 	// auto &reap1 = node1.GetReaper(pkt.from_reaper);
 	auto &reap2 = node2.GetReaper(pkt.to_reaper);
 	
-	Address remoteAddress (InetSocketAddress (reap2.GetAddress(rand() % reap2.GetAddressNum()), pkt.to_port));
+	
+	Address remoteAddress (InetSocketAddress (reap2.GetAddress(rand() % reap2.GetAddressNum()), m_port));
 	// Address remoteAddress (InetSocketAddress (reap2.GetAddress(0), pkt.to_port));
 	auto app = node1.GetApp(pkt.from_reaper);
 	if (app) {
@@ -46,6 +48,7 @@ Api::SetRecvCallback(RecvCallbackType recv_callback) {
 
 void
 Api::InstallApiApps() {
+	m_modif = StaticCast<ModifiedDefaultSimulatorImpl>( Simulator::GetImplementation() );
 	for(uint32_t i=0; i < m_nodes.size(); i++) {
 		m_nodes[i]->InstallApiApps(i, this);
 	}
@@ -65,19 +68,37 @@ void
 Api::OnRecvMsg(Ptr<Packet> packet, Address address, MyApp* app) {
 	
 	SimPacket pkt;
+	
+	// std::cout << "on recv msg: " << m_modif->GetTimeToNextEvent() << "\n";
+	
+	// get from address
+	pkt.from_address = address;
 	InetSocketAddress addr = InetSocketAddress::ConvertFrom (address);
 	Ipv4Address ipv4 = addr.GetIpv4();
-	
 	auto m = m_ip_addr_map[ipv4.Get()];
 	pkt.from_node = m.first;
 	pkt.from_reaper = m.second;
 	
-	pkt.from_address = address;
+	// ports if needed
+	// pkt.from_port = addr.GetPort();
+	// pkt.to_port = app->GetPort();
 	
-	pkt.from_port = addr.GetPort();
+	// get to address
 	pkt.to_node = app->GetNodeNum();
 	pkt.to_reaper = app->GetReaperNum();
-	pkt.to_port = app->GetPort();
+	
+	
+	// auto &node2 = *m_nodes[pkt.to_node];
+	// auto &reap1 = node1.GetReaper(pkt.from_reaper);
+	// auto &reap2 = node2.GetReaper(pkt.to_reaper);
+	
+	
+	// addr = InetSocketAddress::ConvertFrom (packet->GetAddress());
+	// ipv4 = addr.GetIpv4();
+	// reap2.GetChirplet(ipv4.Get());
+	pkt.to_chirplet = 0;
+	
+	// content
 	pkt.content.resize(packet->GetSize());
 	packet->CopyData((uint8_t*)&pkt.content[0], packet->GetSize());
 	if(m_recv_callback) {
