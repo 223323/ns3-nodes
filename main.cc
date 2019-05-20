@@ -21,7 +21,6 @@ void send_pkt() {
 	pkt.to_node = 0;
 	pkt.to_reaper = 6;
 	
-	pkt.to_port = 2000;
 	pkt.content = "heyy";
 	api.SendPacket(pkt);
 }
@@ -36,6 +35,8 @@ void on_recv(const Sim::SimPacket& pkt) {
 
 int main (int argc, char *argv[]) {
 	Config::SetDefault("ns3::Ipv4GlobalRouting::RandomEcmpRouting", BooleanValue (true));
+	
+	GlobalValue::Bind ("SimulatorImplementationType", StringValue("ns3::ModifiedDefaultSimulatorImpl"));
 	
 	// Reaper reaper_links
 	PointToPointHelper reaper_link;
@@ -144,6 +145,10 @@ int main (int argc, char *argv[]) {
 	
 	api.WriteRouting("global-routing.routes");
 	api.WriteChannelStats("channels.csv");
+	
+	
+	
+	
 	
 	Simulator::Run ();
 	Simulator::Destroy ();

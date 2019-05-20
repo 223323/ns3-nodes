@@ -26,18 +26,26 @@ class Reaper {
 friend class Node;
 public:
 	Reaper(Ptr<ns3::Node> node) : m_node(node) { }
-	void AssignIpv4Addresses(ns3::Ipv4AddressHelper& Ips);
-	Ptr<ns3::Node> GetNode() { return m_node; }
-	void PrintIps(std::ostream& o=std::cout, int indent=0);
-	ns3::Ipv4Address GetAddress(int i);
-	uint32_t GetChannelId(int i);
-	int GetAddressNum();
+	void 			 			AssignIpv4Addresses(ns3::Ipv4AddressHelper& Ips);
+	Ptr<ns3::Node> 	 			GetNode() { return m_node; }
+	void 			 			PrintIps(std::ostream& o=std::cout, int indent=0);
+	ns3::Ipv4Address 			GetAddress(int i);
+	uint32_t 		 			GetChannelId(int i);
+	int 			 			GetAddressNum();
 	ns3::Ipv4InterfaceContainer GetInterfaces();
+	void 						AddDevice(Ptr<ns3::NetDevice> dev, bool isLeft);
+	void 						AddSwitchDevice(Ptr<ns3::NetDevice> dev, bool isLeft);
+	void						MapChirplets();
+	int							GetChirplet(uint32_t ip);
+	
 private:
 	Ptr<ns3::Node> 				m_node;
 	ns3::NetDeviceContainer 	m_devices;
+	ns3::NetDeviceContainer 	m_left_devices;
+	ns3::NetDeviceContainer 	m_right_devices;
 	ns3::NetDeviceContainer 	m_switch_devices;
 	ns3::Ipv4InterfaceContainer m_interfaces;
+	std::map<uint32_t,int>		m_map_ipv4_to_chirplet;
 };
 
 

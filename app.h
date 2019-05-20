@@ -17,26 +17,26 @@ public:
     MyApp ();
     virtual ~MyApp ();
 
-    static TypeId GetTypeId (void);
-    void Setup (int node_num, int reaper_num, uint16_t port, Api* api);
+    static TypeId   GetTypeId (void);
+    void 			Setup (int node_num, int reaper_num, uint16_t port, Api* api);
     
-    void SendPacketTo(std::string packet, Address remote_address);
+    void 			SendPacketTo(std::string packet, Address remote_address);
     
-	uint16_t GetPort();
-	int GetNodeNum();
-	int GetReaperNum();
+	uint16_t 		GetPort();
+	int 			GetNodeNum();
+	int 			GetReaperNum();
 	
 private:
 	
-    virtual void StartApplication (void);
-    virtual void StopApplication (void);
-    void HandleRead (Ptr<Socket> socket);
-    void HandleAccept (Ptr<Socket> socket, const Address& from);
-    void HandlePeerClose (Ptr<Socket> socket);
-    void HandlePeerError (Ptr<Socket> socket);
-    void ScheduleTx (void);
-    void SendPacket (void);
-    void Listen();
+    virtual void 	StartApplication (void);
+    virtual void 	StopApplication (void);
+    void 			HandleRead (Ptr<Socket> socket);
+    void 			HandleAccept (Ptr<Socket> socket, const Address& from);
+    void 			HandlePeerClose (Ptr<Socket> socket);
+    void 			HandlePeerError (Ptr<Socket> socket);
+    void 			ScheduleTx (void);
+    void 			SendPacket (void);
+    void 			Listen();
 
     Ptr<Socket>     m_socket;
     Address         m_peer;

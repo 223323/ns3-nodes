@@ -48,6 +48,51 @@ Reaper::GetInterfaces() {
 	return m_interfaces;
 }
 
+void
+Reaper::AddDevice(Ptr<ns3::NetDevice> dev, bool isLeft) {
+	m_devices.Add(dev);
+	if(isLeft) {
+		m_left_devices.Add(dev);
+	} else {
+		m_right_devices.Add(dev);
+	}
+}
+
+void
+Reaper::AddSwitchDevice(Ptr<ns3::NetDevice> dev, bool isLeft) {
+	m_switch_devices.Add(dev);
+	if(isLeft) {
+		m_left_devices.Add(dev);
+	} else {
+		m_right_devices.Add(dev);
+	}
+}
+
+void
+Reaper::MapChirplets() {
+	for(uint32_t i=0; i < m_left_devices.GetN(); i++) {
+		auto dev = m_left_devices.Get(i);
+		InetSocketAddress addr = InetSocketAddress::ConvertFrom (dev->GetAddress());
+		Ipv4Address ipv4 = addr.GetIpv4();
+		m_map_ipv4_to_chirplet[ipv4.Get()] = 0;
+	}
+	
+	for(uint32_t i=0; i < m_right_devices.GetN(); i++) {
+		auto dev = m_right_devices.Get(i);
+		InetSocketAddress addr = InetSocketAddress::ConvertFrom (dev->GetAddress());
+		Ipv4Address ipv4 = addr.GetIpv4();
+		m_map_ipv4_to_chirplet[ipv4.Get()] = 1;
+	}
+}
+
+int
+Reaper::GetChirplet(uint32_t ip) {
+	return m_map_ipv4_to_chirplet[ip];
+}
+
+
+// NODE
+
 Node::Node(std::string name, int nRows, int nCols, int nWaveNet, ns3::PointToPointHelper link)
 	: m_name(name),
 	  m_cols(nCols),
@@ -93,8 +138,10 @@ Node::ConnectReapers(ns3::PointToPointHelper link) {
 				std::cout << "Link: " << n1 << " : " << n2 << "\n";
 				ns3::NetDeviceContainer devs = link.Install(node1, node2);
 				
-				m_reapers[n1].m_devices.Add( devs.Get(0) );
-				m_reapers[n2].m_devices.Add( devs.Get(1) );
+				// m_reapers[n1].m_devices.Add( devs.Get(0) );
+				// m_reapers[n2].m_devices.Add( devs.Get(1) );
+				m_reapers[n1].AddDevice( devs.Get(0), true );
+				m_reapers[n2].AddDevice( devs.Get(1), false );
 				
 				devs.Get(0)->SetMtu(Mtu);
 				devs.Get(1)->SetMtu(Mtu);
@@ -161,8 +208,8 @@ Node::ConnectToSwitch(Ptr<ns3::Node> sw_node, ns3::PointToPointHelper link, ns3:
 			ns3::NetDeviceContainer devs = link.Install(r.GetNode(), sw_node);
 			Names::Add("sw"+std::to_string(++cnt) + "-" + std::to_string(i), devs.Get(0));
 			// r.m_devices.Add( devs );
-			auto ifaces = Ips.Assign(devs);
-			r.m_switch_devices.Add( devs.Get(0) );
+			ns3::Ipv4InterfaceContainer ifaces = Ips.Assign(devs);
+			r.AddSwitchDevice( devs.Get(0), i < m_nWaveNet/2);
 			r.m_interfaces.Add(ifaces.Get(0));
 			devs.Get(0)->SetMtu(Mtu);
 			devs.Get(1)->SetMtu(Mtu);

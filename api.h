@@ -2,6 +2,7 @@
 #define API_H
 #include "nodes.h"
 #include <functional>
+#include "modified-default-simulator-impl.h"
 
 namespace Sim {
 
@@ -9,10 +10,9 @@ class MyApp;
 struct SimPacket {
 	int from_node;
 	int from_reaper;
-	int from_port;
 	int to_node;
 	int to_reaper;
-	int to_port;
+	int to_chirplet;
 	std::string content;
 	Address from_address;
 };
@@ -46,12 +46,14 @@ private:
 			   Ipv4L3Protocol::DropReason dropReason, 
 			   Ptr<Ipv4> ipv4, 
 			   uint32_t);
+			   
 	void DevTxTrace (std::string context, 
 			 Ptr<const Packet> p,
 			 Ptr<NetDevice> tx, 
 			 Ptr<NetDevice> rx,
 			 Time txTime, 
 			 Time rxTime);
+			 
 	void OnRecvMsg(Ptr<Packet> packet, Address address, MyApp* app);
 	RecvCallbackType m_recv_callback;
 	std::vector<Node*> m_nodes;
@@ -61,6 +63,8 @@ private:
 	Ptr<OutputStreamWrapper> m_channel_stats_output;
 	std::vector<int> m_channels;
 	int m_idle, m_max_idle;
+	
+	Ptr<ModifiedDefaultSimulatorImpl> m_modif;
 };
 
 }
