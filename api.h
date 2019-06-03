@@ -33,6 +33,11 @@ public:
 	void WriteIps(std::string filename);
 	void WriteChannelStats(std::string filename);
 	void WriteRouting(std::string filename);
+	
+	
+	uint64_t GetNextEventTime();
+	void ProcessOneEvent();
+	
 private:
 
 	void ProcessChannelStats();

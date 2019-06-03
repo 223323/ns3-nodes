@@ -159,6 +159,13 @@ ModifiedDefaultSimulatorImpl::GetTimeToNextEvent () const
 	return TimeStep(m_events->PeekNext().key.m_ts - m_currentTs);
 }
 
+Time
+ModifiedDefaultSimulatorImpl::GetNextEventTime () const
+{
+	return TimeStep(m_events->PeekNext().key.m_ts);
+}
+
+
 bool 
 ModifiedDefaultSimulatorImpl::IsFinished (void) const
 {

@@ -231,4 +231,14 @@ Api::WriteRouting(std::string filename) {
     g.PrintRoutingTableAllAt (Seconds (12), routingStream);
 }
 
+uint64_t
+Api::GetNextEventTime() {
+	return m_modif->IsFinished() ? -1 : m_modif->GetNextEventTime().NanoSeconds();
+}
+
+void
+Api::ProcessOneEvent();
+	if (!m_modif->IsFinished()) {
+		m_modif->ProcessOneEvent();
+	}
 }
