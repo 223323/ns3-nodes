@@ -237,8 +237,10 @@ Api::GetNextEventTime() {
 }
 
 void
-Api::ProcessOneEvent();
+Api::ProcessOneEvent() {
 	if (!m_modif->IsFinished()) {
 		m_modif->ProcessOneEvent();
 	}
+}
+
 }
