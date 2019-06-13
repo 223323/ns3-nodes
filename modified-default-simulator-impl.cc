@@ -137,6 +137,8 @@ ModifiedDefaultSimulatorImpl::GetSystemId (void) const
 void
 ModifiedDefaultSimulatorImpl::ProcessOneEvent (void)
 {
+  if (m_events->IsEmpty()) return;
+  m_main = SystemThread::Self();
   Scheduler::Event next = m_events->RemoveNext ();
 
   NS_ASSERT (next.key.m_ts >= m_currentTs);

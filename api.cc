@@ -48,7 +48,7 @@ Api::SetRecvCallback(RecvCallbackType recv_callback) {
 
 void
 Api::InstallApiApps() {
-	m_modif = StaticCast<ModifiedDefaultSimulatorImpl>( Simulator::GetImplementation() );
+	m_modif = DynamicCast<ModifiedDefaultSimulatorImpl>( Simulator::GetImplementation() );
 	for(uint32_t i=0; i < m_nodes.size(); i++) {
 		m_nodes[i]->InstallApiApps(i, this);
 	}
@@ -233,13 +233,13 @@ Api::WriteRouting(std::string filename) {
 
 uint64_t
 Api::GetNextEventTime() {
-	return m_modif->IsFinished() ? -1 : m_modif->GetNextEventTime().NanoSeconds();
+	return m_modif->IsFinished() ? -1 : m_modif->GetNextEventTime().GetPicoSeconds();
 }
 
 void
 Api::ProcessOneEvent() {
 	if (!m_modif->IsFinished()) {
-		m_modif->ProcessOneEvent();
+      	m_modif->ProcessOneEvent ();
 	}
 }
 

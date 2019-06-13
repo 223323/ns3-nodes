@@ -234,7 +234,7 @@ Node::InstallApiApps(int node_num, Api* api) {
 		app->Setup(node_num, i, 2000, api);
 		r.GetNode()->AddApplication (app);
 		m_reaper_apps.Add(app);
-		// app->SetStartTime (Seconds (1.));
+		app->SetStartTime (Seconds (0));
 		// app->SetStopTime (Seconds (20.));
 		i++;
 	}

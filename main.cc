@@ -147,10 +147,12 @@ int main (int argc, char *argv[]) {
 	api.WriteChannelStats("channels.csv");
 	
 	
+	while(api.GetNextEventTime() != (uint64_t)-1) {
+		api.ProcessOneEvent();
+	}
 	
 	
-	
-	Simulator::Run ();
+	// Simulator::Run ();
 	Simulator::Destroy ();
 	return 0;
 }
