@@ -137,6 +137,8 @@ ModifiedDefaultSimulatorImpl::GetSystemId (void) const
 void
 ModifiedDefaultSimulatorImpl::ProcessOneEvent (void)
 {
+  if (m_events->IsEmpty()) return;
+  m_main = SystemThread::Self();
   Scheduler::Event next = m_events->RemoveNext ();
 
   NS_ASSERT (next.key.m_ts >= m_currentTs);
@@ -158,6 +160,13 @@ ModifiedDefaultSimulatorImpl::GetTimeToNextEvent () const
 {
 	return TimeStep(m_events->PeekNext().key.m_ts - m_currentTs);
 }
+
+Time
+ModifiedDefaultSimulatorImpl::GetNextEventTime () const
+{
+	return TimeStep(m_events->PeekNext().key.m_ts);
+}
+
 
 bool 
 ModifiedDefaultSimulatorImpl::IsFinished (void) const

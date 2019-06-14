@@ -19,7 +19,7 @@ void send_pkt() {
 	pkt.from_reaper = 0;
 	
 	pkt.to_node = 0;
-	pkt.to_reaper = 6;
+	pkt.to_reaper = 7;
 	
 	pkt.content = "heyy";
 	api.SendPacket(pkt);
@@ -54,7 +54,7 @@ int main (int argc, char *argv[]) {
 	Sim::Node node0("node0", 2, 4, 2, reaper_link);
 	
 	// node2 with matrix 2x4 reapers, 2 WaveNet ports per reaper
-	Sim::Node node1("node1", 2, 4, 2, reaper_link);
+	// Sim::Node node1("node1", 2, 4, 2, reaper_link);
 	
 	// switch
 	auto sw = CreateObject<Node>();
@@ -70,22 +70,23 @@ int main (int argc, char *argv[]) {
 	node0.AssignIpv4Addresses(ipv4);
 	// IP addresses for node1 are 10.1.xxx.xxx
 	ipv4.SetBase ("10.1.0.0", "255.255.255.0");
-	node1.AssignIpv4Addresses(ipv4);
+	// node1.AssignIpv4Addresses(ipv4);
 	// ipv4.SetBase ("10.2.0.0", "255.255.255.0");
 	ipv4.SetBase ("10.2.0.0", "255.255.255.0");
 	node0.ConnectToSwitch(sw, sw_link, ipv4);
-	node1.ConnectToSwitch(sw, sw_link, ipv4);
+	// node1.ConnectToSwitch(sw, sw_link, ipv4);
 	
 	api.AddNode(node0);
-	api.AddNode(node1);
+	// api.AddNode(node1);
 	api.InstallApiApps();
 	api.SetRecvCallback(&on_recv);
 	
 	api.WriteIps("ips.txt");
 	
-	Simulator::Schedule(Seconds(1), send_pkt);
-	Simulator::Schedule(Seconds(4), send_pkt);
-	Simulator::Schedule(Seconds(7), send_pkt);
+	Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+	
+	for(int i=0; i < 30; i++) 
+	Simulator::Schedule(Seconds(i), send_pkt);
 	
 	/*
 		OnOff application
@@ -139,7 +140,7 @@ int main (int argc, char *argv[]) {
 		for example:
 			p-node1-0-3.pcap
 	*/
-	Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+	
 	
 	reaper_link.EnablePcapAll("p");
 	
@@ -147,10 +148,12 @@ int main (int argc, char *argv[]) {
 	api.WriteChannelStats("channels.csv");
 	
 	
+	while(api.GetNextEventTime() != (uint64_t)-1) {
+		api.ProcessOneEvent();
+	}
 	
 	
-	
-	Simulator::Run ();
+	// Simulator::Run ();
 	Simulator::Destroy ();
 	return 0;
 }

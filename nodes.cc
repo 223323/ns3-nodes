@@ -10,13 +10,16 @@ namespace Sim {
 void
 Reaper::AssignIpv4Addresses(ns3::Ipv4AddressHelper& Ips) {
 	// m_interfaces.Add(Ips.Assign(m_devices));
-	m_interfaces = Ips.Assign(m_devices);
-	Ips.NewNetwork();
+	for(uint i=0; i < m_devices.GetN(); i++) {
+		m_interfaces.Add( Ips.Assign(m_devices.Get(i)) );
+		Ips.NewNetwork();
+	}
 }
 
 void
 Reaper::PrintIps(std::ostream& o, int indent) {
-	for(uint i=0; i < m_interfaces.GetN(); i++) {
+	// for(uint i=0; i < m_interfaces.GetN(); i++) {
+	for(uint i=0; i < (uint)GetAddressNum(); i++) {
 		o.write("\t\t\t\t", indent);
 		o << GetAddress(i) << " channel: " << GetChannelId(i) << "\n";
 	}
@@ -36,16 +39,25 @@ Reaper::GetChannelId(int i) {
 ns3::Ipv4Address
 Reaper::GetAddress(int i) {
 	return m_interfaces.GetAddress(i,0);
+	// std::cout << "GetAddress " << m_devices.GetN() << "\n";
+	// InetSocketAddress addr2 = InetSocketAddress::ConvertFrom (m_devices.Get(i)->GetAddress());
+	// Ipv4Address addr = addr2.GetIpv4();
+	// return addr;
 }
 
 int
 Reaper::GetAddressNum() {
-	return m_interfaces.GetN();
+	return m_devices.GetN();
 }
 
 ns3::Ipv4InterfaceContainer
 Reaper::GetInterfaces() {
 	return m_interfaces;
+}
+
+ns3::NetDeviceContainer
+Reaper::GetDevices() {
+	return m_devices;
 }
 
 void
@@ -92,7 +104,6 @@ Reaper::GetChirplet(uint32_t ip) {
 
 
 // NODE
-
 Node::Node(std::string name, int nRows, int nCols, int nWaveNet, ns3::PointToPointHelper link)
 	: m_name(name),
 	  m_cols(nCols),
@@ -114,10 +125,18 @@ ns3::InternetStackHelper Node::internet;
 
 
 void
-Node::AssignIpv4Addresses (ns3::Ipv4AddressHelper Ips) {
-	for (auto &r : m_reapers) {
-		r.AssignIpv4Addresses(Ips);
+Node::AssignIpv4Addresses (ns3::Ipv4AddressHelper& Ips) {
+	for(auto &reap : m_reapers) {
+		// Ips.Assign(reap.m_devices);
+		// Ips.NewNetwork();
+		reap.AssignIpv4Addresses(Ips);
 	}
+	// for(auto devs : m_dev_pairs) {
+		// std::cout << "dev " << devs.GetN() << "\n";
+		// Ips.Assign(devs);
+		// Ips.NewNetwork();
+	// }
+	
 }
 
 void
@@ -138,8 +157,8 @@ Node::ConnectReapers(ns3::PointToPointHelper link) {
 				std::cout << "Link: " << n1 << " : " << n2 << "\n";
 				ns3::NetDeviceContainer devs = link.Install(node1, node2);
 				
-				// m_reapers[n1].m_devices.Add( devs.Get(0) );
-				// m_reapers[n2].m_devices.Add( devs.Get(1) );
+				m_dev_pairs.push_back(devs);
+				
 				m_reapers[n1].AddDevice( devs.Get(0), true );
 				m_reapers[n2].AddDevice( devs.Get(1), false );
 				
@@ -234,8 +253,7 @@ Node::InstallApiApps(int node_num, Api* api) {
 		app->Setup(node_num, i, 2000, api);
 		r.GetNode()->AddApplication (app);
 		m_reaper_apps.Add(app);
-		// app->SetStartTime (Seconds (1.));
-		// app->SetStopTime (Seconds (20.));
+		app->SetStartTime (Seconds (0));
 		i++;
 	}
 }

@@ -33,19 +33,21 @@ public:
 	uint32_t 		 			GetChannelId(int i);
 	int 			 			GetAddressNum();
 	ns3::Ipv4InterfaceContainer GetInterfaces();
+	ns3::NetDeviceContainer GetDevices();
 	void 						AddDevice(Ptr<ns3::NetDevice> dev, bool isLeft);
 	void 						AddSwitchDevice(Ptr<ns3::NetDevice> dev, bool isLeft);
 	void						MapChirplets();
 	int							GetChirplet(uint32_t ip);
 	
 private:
-	Ptr<ns3::Node> 				m_node;
-	ns3::NetDeviceContainer 	m_devices;
-	ns3::NetDeviceContainer 	m_left_devices;
-	ns3::NetDeviceContainer 	m_right_devices;
-	ns3::NetDeviceContainer 	m_switch_devices;
-	ns3::Ipv4InterfaceContainer m_interfaces;
-	std::map<uint32_t,int>		m_map_ipv4_to_chirplet;
+	Ptr<ns3::Node> 						 m_node;
+	ns3::NetDeviceContainer 			 m_devices;
+	
+	ns3::NetDeviceContainer 			 m_left_devices;
+	ns3::NetDeviceContainer 			 m_right_devices;
+	ns3::NetDeviceContainer 			 m_switch_devices;
+	ns3::Ipv4InterfaceContainer 		 m_interfaces;
+	std::map<uint32_t,int>				 m_map_ipv4_to_chirplet;
 };
 
 
@@ -55,7 +57,7 @@ public:
 	Node(std::string name, int nRows, int nCols, int nWaveNet, ns3::PointToPointHelper link);
 	
 	void ConnectToSwitch(Ptr<ns3::Node> sw_node, ns3::PointToPointHelper switch_link, ns3::Ipv4AddressHelper& Ips);
-	void AssignIpv4Addresses (ns3::Ipv4AddressHelper Ips);
+	void AssignIpv4Addresses (ns3::Ipv4AddressHelper& Ips);
 	ns3::NodeContainer GetNodes() { return m_reaper_nodes; }
 	Reaper& GetReaper(int i);
 	std::vector<Reaper>& GetReapers();
@@ -75,6 +77,7 @@ private:
 	int 					  m_nReapers;
 	int 					  m_nWaveNet;
 	bool 					  m_reapers_connected;
+	std::vector<ns3::NetDeviceContainer> m_dev_pairs;
 	ns3::NodeContainer  	  m_reaper_nodes;
 	std::vector<Reaper> 	  m_reapers;
 	ns3::ApplicationContainer m_reaper_apps;

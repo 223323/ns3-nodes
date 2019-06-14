@@ -80,12 +80,14 @@ public:
   
   
   Time GetTimeToNextEvent () const;
-
+  Time GetNextEventTime () const;
+  
+  /** Process the next event. */
+  void ProcessOneEvent (void);
 private:
   virtual void DoDispose (void);
 
-  /** Process the next event. */
-  void ProcessOneEvent (void);
+  
   /** Move events from a different context into the main event queue. */
   void ProcessEventsWithContext (void);
  
