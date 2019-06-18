@@ -35,6 +35,7 @@ public:
 	void WriteRouting(std::string filename);
 	
 	
+	bool Finished();
 	uint64_t GetNextEventTime();
 	void ProcessOneEvent();
 	

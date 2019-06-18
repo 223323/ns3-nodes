@@ -9,7 +9,6 @@ namespace Sim {
 
 void
 Reaper::AssignIpv4Addresses(ns3::Ipv4AddressHelper& Ips) {
-	// m_interfaces.Add(Ips.Assign(m_devices));
 	for(uint i=0; i < m_devices.GetN(); i++) {
 		m_interfaces.Add( Ips.Assign(m_devices.Get(i)) );
 		Ips.NewNetwork();
@@ -126,11 +125,13 @@ ns3::InternetStackHelper Node::internet;
 
 void
 Node::AssignIpv4Addresses (ns3::Ipv4AddressHelper& Ips) {
+	
 	for(auto &reap : m_reapers) {
-		// Ips.Assign(reap.m_devices);
-		// Ips.NewNetwork();
-		reap.AssignIpv4Addresses(Ips);
+		reap.m_interfaces = Ips.Assign(reap.m_devices);
+		Ips.NewNetwork();
+		// reap.AssignIpv4Addresses(Ips);
 	}
+	
 	// for(auto devs : m_dev_pairs) {
 		// std::cout << "dev " << devs.GetN() << "\n";
 		// Ips.Assign(devs);
@@ -142,7 +143,7 @@ Node::AssignIpv4Addresses (ns3::Ipv4AddressHelper& Ips) {
 void
 Node::ConnectReapers(ns3::PointToPointHelper link) {
 	m_reapers_connected = true;
-	
+	std::cout << m_name << "\n";
 	for(int x=0; x < m_cols-1; x++) {
 		
 		for(int y=0; y < m_rows; y++) {
@@ -154,7 +155,7 @@ Node::ConnectReapers(ns3::PointToPointHelper link) {
 				int n2 = m_cols * y1 + (x+1) % m_cols;
 				auto node2 = m_reapers[n2].GetNode();
 				
-				std::cout << "Link: " << n1 << " : " << n2 << "\n";
+				std::cout << "\tLink: " << n1 << " : " << n2 << "\n";
 				ns3::NetDeviceContainer devs = link.Install(node1, node2);
 				
 				m_dev_pairs.push_back(devs);

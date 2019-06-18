@@ -33,7 +33,7 @@ public:
 	uint32_t 		 			GetChannelId(int i);
 	int 			 			GetAddressNum();
 	ns3::Ipv4InterfaceContainer GetInterfaces();
-	ns3::NetDeviceContainer GetDevices();
+	ns3::NetDeviceContainer 	GetDevices();
 	void 						AddDevice(Ptr<ns3::NetDevice> dev, bool isLeft);
 	void 						AddSwitchDevice(Ptr<ns3::NetDevice> dev, bool isLeft);
 	void						MapChirplets();
@@ -42,7 +42,6 @@ public:
 private:
 	Ptr<ns3::Node> 						 m_node;
 	ns3::NetDeviceContainer 			 m_devices;
-	
 	ns3::NetDeviceContainer 			 m_left_devices;
 	ns3::NetDeviceContainer 			 m_right_devices;
 	ns3::NetDeviceContainer 			 m_switch_devices;

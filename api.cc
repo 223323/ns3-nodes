@@ -131,12 +131,13 @@ Api::DevTxTrace (std::string context,
 	double lbRx = (now + rxTime).GetSeconds ();
 	*/
 	int ch_id = tx->GetChannel()->GetId();
-	// int ch_id2 = rx->GetChannel()->GetId();
+	int ch_id2 = rx->GetChannel()->GetId();
 	// if (ch_id >= (int)m_channels.size()) {
 		// m_channels.resize(ch_id+1);
 	// }
 	m_channels[ch_id] += p->GetSize();
 	m_idle = 0;
+	last_iface = ch_id2;
 }
 
 const std::vector<std::string> 
@@ -174,7 +175,7 @@ Api::Ipv4TxTrace (std::string context, Ptr<const Packet> p, Ptr<Ipv4> ipv4, uint
 void
 Api::Ipv4RxTrace (std::string context, Ptr<const Packet> p, Ptr<Ipv4> ipv4, uint32_t interfaceIndex) {
   const Ptr <const ns3::Node> node = GetNodeFromContext (context);
-  last_iface = interfaceIndex;
+ 
    // std::cout << "rx iface " << interfaceIndex << "\n";
   // ++m_nodeIpv4Rx[node->GetId ()];
 }
@@ -250,6 +251,11 @@ Api::ProcessOneEvent() {
 	if (!m_modif->IsFinished()) {
       	m_modif->ProcessOneEvent ();
 	}
+}
+
+bool
+Api::Finished() {
+	return m_modif->IsFinished();
 }
 
 }
