@@ -1,6 +1,10 @@
 #include "api.h"
 #include "app.h"
 #include "modified-default-simulator-impl.h"
+
+#include "ns3/csma-helper.h"
+#include "ns3/bridge-helper.h"
+
 namespace Sim {
 
 Api::Api() : m_idle(0) {
@@ -9,17 +13,31 @@ Api::Api() : m_idle(0) {
 }
 
 void
-Api::AddNode(Node& node) {
-	m_nodes.push_back(&node);
-	
-	auto &reapers = node.GetReapers();
-	for(size_t r=0; r < reapers.size(); r++) {
-		auto ifaces = reapers[r].GetInterfaces();
-		for(int i=0; i < (int)ifaces.GetN(); i++) {
-			Ipv4Address addr = ifaces.GetAddress(i,0);
-			m_ip_addr_map[addr.Get()] = std::make_pair((int)m_nodes.size()-1, (int)r);
-		}
-	}
+Api::AddNode(int rack, Node* node) {
+	m_nodes.push_back(node);
+	m_racks[rack].AddNode(node);
+}
+
+
+
+void
+Api::SetReaperLink(std::string speed, std::string delay) {
+	m_reaper_link = {speed,delay};
+}
+
+void
+Api::SetRackLink(std::string speed, std::string delay) {
+	m_rack_link = {speed,delay};
+}
+
+void
+Api::SetSpineSwitchLink(std::string speed, std::string delay) {
+	m_spine_switch_link = {speed,delay};
+}
+
+void
+Api::CreateRacks(int racks) {
+	m_racks.resize(racks);
 }
 
 void
@@ -32,12 +50,29 @@ Api::SendPacket(const SimPacket& pkt) {
 	// auto &reap1 = node1.GetReaper(pkt.from_reaper);
 	auto &reap2 = node2.GetReaper(pkt.to_reaper);
 	
+	// auto addr = reap2.GetWNAddress(rand() % reap2.GetWNAddressNum());
+	// auto addr = reap2.GetAddress(rand() % reap2.GetAddressNum());
+	// Address remoteAddress (InetSocketAddress (addr, m_port));
+	Address remoteAddress;
+	if(Api::m_use_ipv6) {
+		auto addr6 = reap2.GetWNAddressV6(rand() % reap2.GetWNAddressNum());
+		remoteAddress = Address(Inet6SocketAddress (addr6, m_port));
+		std::cout << "rand addr: " << addr6 << "\n";
+	} else {
+		auto addr = reap2.GetWNAddress(rand() % reap2.GetWNAddressNum());
+		// auto addr = reap2.GetAddress(rand() % reap2.GetAddressNum());
+		remoteAddress = (InetSocketAddress (addr, m_port));
+		std::cout << "rand addr: " << addr << "\n";
+	}
 	
-	Address remoteAddress (InetSocketAddress (reap2.GetAddress(rand() % reap2.GetAddressNum()), m_port));
-	// Address remoteAddress (InetSocketAddress (reap2.GetAddress(0), pkt.to_port));
+	
+	
 	auto app = node1.GetApp(pkt.from_reaper);
 	if (app) {
-		app->SendPacketTo(pkt.content, remoteAddress);
+		std::cout << "sending packet" << "\n";
+		app->SendPacketTo(pkt.content, pkt.virtual_size, remoteAddress);
+	} else {
+		std::cout << "not sending packet\n";
 	}
 }
 
@@ -46,12 +81,90 @@ Api::SetRecvCallback(RecvCallbackType recv_callback) {
 	m_recv_callback = recv_callback;
 }
 
+
+void
+Api::ConnectToSpineSwitch() {
+	ns3::NetDeviceContainer spine_devs;
+	ns3::NetDeviceContainer router_devs;
+	CsmaHelper csma;
+	PointToPointHelper link;
+	
+	Ipv4AddressHelper ipv4h;
+	ipv4h.SetBase("172.1.0.0", "255.255.255.0");
+	
+	// Ipv4AddressHelper ipv4h;
+	// ipv4h.SetBase("172.1.0.0", "255.255.255.0");
+	
+	for(Rack& r : m_racks) {
+		ns3::NodeContainer rack_routers = r.GetRackRouters();
+		for(uint i=0; i < rack_routers.GetN(); i++) {
+			ns3::NetDeviceContainer nd;
+			if(Api::m_use_p2p) {
+				nd = link.Install(m_spine_switch, rack_routers.Get(i));
+				ipv4h.Assign(nd);
+			} else {
+				nd = csma.Install(NodeContainer( m_spine_switch, rack_routers.Get(i) ) );
+			}
+			spine_devs.Add( nd.Get(0) );
+			router_devs.Add( nd.Get(1) );
+		}
+	}
+	
+	if(!Api::m_use_p2p) {
+		BridgeHelper bridge;
+		bridge.Install(m_spine_switch, spine_devs);
+		ipv4h.Assign(router_devs);
+	}
+}
+
 void
 Api::InstallApiApps() {
+	m_spine_switch = CreateObject<ns3::Node>();
+	Names::Add("spineswitch", m_spine_switch);
+	Api::internet.Install(m_spine_switch);
+	
+	for(auto node : m_nodes) {
+		node->ConnectReapers();
+	}
+	
+	for(Rack& r : m_racks) {
+		r.ConnectNodesToRackRouters();
+	}
+	ConnectToSpineSwitch();
+	
+	for(auto node : m_nodes) {
+		auto &reapers = node->GetReapers();
+		for(size_t r=0; r < reapers.size(); r++) {
+			auto ifaces = reapers[r].GetInterfaces();
+			for(int i=0; i < (int)ifaces.GetN(); i++) {
+				Ipv4Address addr = ifaces.GetAddress(i,0);
+				// std::cout << "adding map " << addr << (m_nodes.size()-1) << " , " << r << "\n";
+				m_ip_addr_map[addr.Get()] = std::make_pair((int)m_nodes.size()-1, (int)r);
+			}
+			auto wn_ifaces = reapers[r].GetWNInterfaces();
+			for(uint i=0; i < wn_ifaces.GetN(); i++) {
+				Ipv4Address addr = wn_ifaces.GetAddress(i,0);
+				m_ip_addr_map[addr.Get()] = std::make_pair(node->GetNodeIndex(), (int)r);
+			}
+			
+			auto wn_ifaces_v6 = reapers[r].GetWNInterfacesV6();
+			for(uint i=0; i < wn_ifaces_v6.GetN(); i++) {
+				Ipv6Address addr = wn_ifaces_v6.GetAddress(i,0);
+				uint8_t bytes[16];
+				addr.GetBytes(bytes);
+				uint64_t *b = (uint64_t*)(bytes+7);
+				m_ip_addr_map[*b] = std::make_pair(node->GetNodeIndex(), (int)r);
+			}
+		}
+	}
+	
 	m_modif = DynamicCast<ModifiedDefaultSimulatorImpl>( Simulator::GetImplementation() );
 	for(uint32_t i=0; i < m_nodes.size(); i++) {
 		m_nodes[i]->InstallApiApps(i, this);
 	}
+	Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+	// Ipv6GlobalRoutingHelper::PopulateRoutingTables ();
+	Ipv6StaticRoutingHelper routingHelper;
 }
 
 void
@@ -75,6 +188,8 @@ Api::OnRecvMsg(Ptr<Packet> packet, Address address, MyApp* app) {
 	pkt.from_address = address;
 	InetSocketAddress addr = InetSocketAddress::ConvertFrom (address);
 	Ipv4Address ipv4 = addr.GetIpv4();
+	
+	std::cout << "recv from " << ipv4 << "\n";
 	auto m = m_ip_addr_map[ipv4.Get()];
 	pkt.from_node = m.first;
 	pkt.from_reaper = m.second;
@@ -87,26 +202,15 @@ Api::OnRecvMsg(Ptr<Packet> packet, Address address, MyApp* app) {
 	pkt.to_node = app->GetNodeNum();
 	pkt.to_reaper = app->GetReaperNum();
 	
-	
-	// auto &node2 = *m_nodes[pkt.to_node];
-	// auto &reap1 = node1.GetReaper(pkt.from_reaper);
-	// auto &reap2 = node2.GetReaper(pkt.to_reaper);
-	
-	
-	// addr = InetSocketAddress::ConvertFrom (packet->GetAddress());
-	// ipv4 = addr.GetIpv4();
-	// reap2.GetChirplet(ipv4.Get());
-	pkt.to_chirplet = 0;
-	
 	// content
 	pkt.content.resize(packet->GetSize());
+	
 	packet->CopyData((uint8_t*)&pkt.content[0], packet->GetSize());
+	std::cout << "packet size: " << packet->GetSize() << "\n";
 	if(m_recv_callback) {
 		m_recv_callback(pkt);
 	}
 }
-
-
 
 void 
 Api::DevTxTrace (std::string context, 
@@ -148,7 +252,6 @@ Api::GetElementsFromContext (const std::string& context)
   return elements;
 }
 
-
 Ptr <ns3::Node>
 Api::GetNodeFromContext (const std::string& context) {
   std::vector <std::string> elements = GetElementsFromContext (context);
@@ -180,9 +283,8 @@ Api::Ipv4DropTrace (std::string context,
 {
   const Ptr <const ns3::Node> node = GetNodeFromContext (context);
   // ++m_nodeIpv4Drop[node->GetId ()];
+  std::cout << "pkt dropped\n";
 }
-
-
 
 void
 Api::ProcessChannelStats() {
@@ -203,14 +305,11 @@ Api::ProcessChannelStats() {
 	s << "\n";
 }
 
-
-
 void
 Api::WriteIps(std::string filename) {
 	Ptr<OutputStreamWrapper> ips = Create<OutputStreamWrapper> (filename, std::ios::out);
 	PrintIps(*ips->GetStream());
 }
-
 
 void
 Api::WriteChannelStats(std::string filename) {
@@ -222,7 +321,6 @@ Api::WriteChannelStats(std::string filename) {
 	Simulator::Schedule(Seconds(1), &Api::ProcessChannelStats, this);
 	m_channels.resize(ChannelList::GetNChannels());
 }
-
 
 void
 Api::WriteRouting(std::string filename) {
@@ -242,5 +340,30 @@ Api::ProcessOneEvent() {
       	m_modif->ProcessOneEvent ();
 	}
 }
+
+void
+Api::ProcessAllEvents() {
+	while(GetNextEventTime() != (uint64_t)-1) {
+		ProcessOneEvent();
+	}
+}
+
+void
+Api::UseIPv6(bool value) {
+	m_use_ipv6 = value;
+}
+
+void
+Api::UseP2P(bool value) {
+	m_use_p2p = value;
+}
+
+Link Api::m_reaper_link;
+Link Api::m_rack_link;
+Link Api::m_spine_switch_link;
+bool Api::m_use_ipv6 = false;
+bool Api::m_use_p2p = false;
+bool Api::m_reapers_circular = true;
+ns3::InternetStackHelper Api::internet;
 
 }

@@ -19,7 +19,6 @@ MyApp::~MyApp () {
     m_socket = 0;
 }
 
-
 TypeId
 MyApp::GetTypeId (void) {
     static TypeId tid = TypeId ("MyApp")
@@ -49,7 +48,6 @@ MyApp::StartApplication (void) {
     // SendPacket ();
 }
 
-
 void
 MyApp::Listen () {
     NS_LOG_FUNCTION (this);
@@ -68,7 +66,6 @@ MyApp::Listen () {
         MakeCallback (&MyApp::HandlePeerError, this));
 }
 
-
 void
 MyApp::StopApplication (void) {
     m_running = false;
@@ -83,31 +80,15 @@ MyApp::StopApplication (void) {
 }
 
 void
-MyApp::SendPacketTo(std::string packet_content, Address remote_address) {
-
+MyApp::SendPacketTo(std::string content, int virtual_size, Address remote_address) {
     if(m_socket) {
-		m_socket->SendTo ((const uint8_t*)&packet_content[0], packet_content.size(), 0, remote_address);
+		Ptr<Packet> packet = Create<Packet> ((const uint8_t*)&content[0], std::min<size_t>(virtual_size, content.size()));
+		int padding = std::max<int>(0, virtual_size - content.size());
+		if(padding > 0) {
+			packet->AddPaddingAtEnd(padding);
+		}
+		m_socket->SendTo (packet, 0, remote_address);
 	}
-}
-
-void
-MyApp::SendPacket (void) {
-    Ptr<Packet> packet = Create<Packet> (m_packetSize);
-
-    // packet->AddAtEnd(packet2);
-    m_socket->Send (packet);
-
-    if (++m_packetsSent < m_nPackets) {
-        ScheduleTx ();
-    }
-}
-
-void
-MyApp::ScheduleTx (void) {
-    if (m_running) {
-        Time tNext (Seconds (m_packetSize * 8 / static_cast<double> (m_dataRate.GetBitRate ())));
-        m_sendEvent = Simulator::Schedule (tNext, &MyApp::SendPacket, this);
-    }
 }
 
 void
@@ -130,8 +111,6 @@ void
 MyApp::HandleRead (Ptr<Socket> socket) {
     Ptr<Packet> packet;
     Address from;
-
-	
 	
     while ((packet = socket->RecvFrom (from))) {
         if (packet->GetSize () == 0) {
@@ -151,6 +130,7 @@ int
 MyApp::GetNodeNum() {
 	return m_node_num;
 }
+
 int
 MyApp::GetReaperNum() {
 	return m_reaper_num;

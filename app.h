@@ -19,8 +19,7 @@ public:
 
     static TypeId   GetTypeId (void);
     void 			Setup (int node_num, int reaper_num, uint16_t port, Api* api);
-    
-    void 			SendPacketTo(std::string packet, Address remote_address);
+    void 			SendPacketTo(std::string packet, int virtual_size, Address remote_address);
     
 	uint16_t 		GetPort();
 	int 			GetNodeNum();
@@ -34,8 +33,6 @@ private:
     void 			HandleAccept (Ptr<Socket> socket, const Address& from);
     void 			HandlePeerClose (Ptr<Socket> socket);
     void 			HandlePeerError (Ptr<Socket> socket);
-    void 			ScheduleTx (void);
-    void 			SendPacket (void);
     void 			Listen();
 
     Ptr<Socket>     m_socket;

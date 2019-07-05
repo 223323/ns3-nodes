@@ -1,4 +1,3 @@
-#include "nodes.h"
 #include "api.h"
 
 #include "ns3/mobility-module.h"
@@ -15,144 +14,70 @@ Sim::Api api;
 // 4 5 6 7
 void send_pkt() {
 	Sim::SimPacket pkt;
-	pkt.from_node = 0;
-	pkt.from_reaper = 0;
+	
+	pkt.from_node = 1;
+	pkt.from_reaper = 3;
 	
 	pkt.to_node = 0;
 	pkt.to_reaper = 6;
 	
+	pkt.virtual_size = 3;
 	pkt.content = "heyy";
 	api.SendPacket(pkt);
 }
 
 void on_recv(const Sim::SimPacket& pkt) {
-	std::cout << "recv (" << pkt.to_node << "-" << pkt.to_reaper << ") " <<
+	std::cout << "[" << ns3::Simulator::Now().GetSeconds() << "] recv (" << pkt.to_node << "-" << pkt.to_reaper << ") " <<
 		" msg from (" << pkt.from_node << "-" << pkt.from_reaper << 
 		") msg: " << pkt.content << "\n";
 }
 
-
-
 int main (int argc, char *argv[]) {
 	Config::SetDefault("ns3::Ipv4GlobalRouting::RandomEcmpRouting", BooleanValue (true));
-	
 	GlobalValue::Bind ("SimulatorImplementationType", StringValue("ns3::ModifiedDefaultSimulatorImpl"));
 	
-	// Reaper reaper_links
-	PointToPointHelper reaper_link;
-	reaper_link.SetDeviceAttribute  ("DataRate", StringValue ("10Mbps"));
-	reaper_link.SetChannelAttribute ("Delay", StringValue ("1ms"));
+	api.SetReaperLink("10Mbps", "1ms");
+	api.SetRackLink("10Mbps", "1ms");
+	api.SetSpineSwitchLink("10Mbps", "1ms");
 	
-
-	InternetStackHelper internet;
-	Sim::Node::internet = internet;
-	// IP adresses
-	Ipv4AddressHelper ipv4;
-	ipv4.SetBase ("10.0.0.0", "255.255.255.0");
+	Sim::Api::UseIPv6(1);
+	Sim::Api::UseP2P(1);
 	
-	// node1 with matrix 2x4 reapers, 2 WaveNet ports per reaper
-	Sim::Node node0("node0", 2, 4, 2, reaper_link);
+	// matrix 2x4 reapers, 2 WaveNet ports per reaper
+	Sim::Node *node0 = new Sim::Node(2, 4, 2);
+	Sim::Node *node1 = new Sim::Node(2, 4, 2);
+	Sim::Node *node2 = new Sim::Node(2, 4, 2);
+	Sim::Node *node3 = new Sim::Node(2, 4, 2);
 	
-	// node2 with matrix 2x4 reapers, 2 WaveNet ports per reaper
-	Sim::Node node1("node1", 2, 4, 2, reaper_link);
+	api.CreateRacks(3);
+	api.AddNode(0, node0); // add node0 to rack 0
+	api.AddNode(0, node1); // add node0 to rack 0
+	api.AddNode(1, node2); // add node0 to rack 1
+	api.AddNode(2, node3); // add node0 to rack 2
 	
-	// switch
-	auto sw = CreateObject<Node>();
-	internet.Install(sw);
-	
-	// switch for switch
-	PointToPointHelper sw_link;
-	sw_link.SetDeviceAttribute  ("DataRate", StringValue ("0.5Mbps"));
-	sw_link.SetChannelAttribute ("Delay", StringValue ("1ms")); // propagation delay
-	Names::Add("switch", sw);
-	
-	// IP addresses for node0 are 10.0.xxx.xxx
-	node0.AssignIpv4Addresses(ipv4);
-	// IP addresses for node1 are 10.1.xxx.xxx
-	ipv4.SetBase ("10.1.0.0", "255.255.255.0");
-	node1.AssignIpv4Addresses(ipv4);
-	// ipv4.SetBase ("10.2.0.0", "255.255.255.0");
-	ipv4.SetBase ("10.2.0.0", "255.255.255.0");
-	node0.ConnectToSwitch(sw, sw_link, ipv4);
-	node1.ConnectToSwitch(sw, sw_link, ipv4);
-	
-	api.AddNode(node0);
-	api.AddNode(node1);
-	api.InstallApiApps();
 	api.SetRecvCallback(&on_recv);
-	
+	api.InstallApiApps();
 	api.WriteIps("ips.txt");
 	
-	Simulator::Schedule(Seconds(1), send_pkt);
-	Simulator::Schedule(Seconds(4), send_pkt);
-	Simulator::Schedule(Seconds(7), send_pkt);
+	api.ProcessAllEvents();
+	for(int i=0; i < 20; i++) {
+		Simulator::Schedule(Seconds(i*2), send_pkt);
+	}
 	
 	/*
-		OnOff application
-		Parameters are (On/Off)Time, DataRate, PacketSize
-	*/
-	/*
-	ApplicationContainer apps;
-	OnOffHelper clientHelper ("ns3::UdpSocketFactory", Address ());
-	clientHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"));
-	clientHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0.0]"));
-	clientHelper.SetAttribute ("DataRate", DataRateValue(DataRate("10Mbps")));
-	clientHelper.SetAttribute ("PacketSize", UintegerValue(15000));
-	
-	apps = node0.AddOnOffApplication(node0.GetReaper(0), node0.GetReaper(6), clientHelper, 1000);
-	apps.Stop(Seconds(0.0));
-	apps.Start(Seconds(0.0));
-	apps.Stop(Seconds(10.0));
-	
-	node0.PacketSinkApplication(1000);
-	node1.PacketSinkApplication(1000);
-	*/
-	
-	/*
-	MobilityHelper mobility;
-
-	mobility.SetPositionAllocator ("ns3::GridPositionAllocator", 
-				"MinX", DoubleValue (0.0), "MinY", DoubleValue (0.0),"DeltaX", DoubleValue (5.0), "DeltaY", DoubleValue (10.0), 
-				 "GridWidth", UintegerValue (5), "LayoutType", StringValue ("RowFirst"));
-
-	mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-	
-	mobility.Install (sw);
-	mobility.Install (node0.GetNodes());
-	mobility.Install (node1.GetNodes());
-
-	AnimationInterface anim ("SimpleNS3Simulation_NetAnimationOutput.xml"); 
-	
-	anim.SetConstantPosition (nodes.Get(0), 0, 5);
-	anim.SetConstantPosition (nodes.Get(1), 10, 5);
-	
-	AnimationInterface anim (animFile);
-	
-	AsciiTraceHelper ascii;
-	reaper_link.EnableAsciiAll (ascii.CreateFileStream ("reaper_link.tr"));
-	*/
-	
-	
-	/* 
 		Write PCAP files, which are named by this rule:
 			<Prefix>-<NodePrefixName>-<netdevice>.pcap
 		for example:
 			p-node1-0-3.pcap
 	*/
-	Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
-	
-	reaper_link.EnablePcapAll("p");
+	PointToPointHelper ptph;
+	ptph.EnablePcapAll("p");
+	CsmaHelper ch;
+	ch.EnablePcapAll("c");
 	
 	api.WriteRouting("global-routing.routes");
 	api.WriteChannelStats("channels.csv");
-	
-	
-	while(api.GetNextEventTime() != (uint64_t)-1) {
-		api.ProcessOneEvent();
-	}
-	
-	
-	// Simulator::Run ();
+	api.ProcessAllEvents();
 	Simulator::Destroy ();
 	return 0;
 }
